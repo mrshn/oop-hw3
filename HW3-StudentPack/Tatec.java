@@ -175,7 +175,7 @@ public class Tatec
     private static double _calculateUnhappinessHelper( Student student, double h, int index )
     {
         double unhappy = _isStudentUnhappy( student, index )
-                ? ( -100.0 / h ) * Math.log( 1 - ( student.getStudentTokenWithIndex(index) / 100.0) )
+                ? ( -100.0 / h ) * Math.log( 1.0 - ( student.getStudentTokenWithIndex(index) / 100.0) )
                 : 0.0;
 
         Course findEnrolledCourse = allCourses.stream()
@@ -188,7 +188,7 @@ public class Tatec
             unhappy = unhappy * unhappy;
         }
 
-        return Math.min(unhappy, 100.0);
+        return unhappy >= 100.0 ? 100.0 : unhappy;
     }
 
     private static boolean _isStudentUnhappy(Student student, int index)

@@ -12,7 +12,7 @@ public class Course {
     public Course(String row)
     {
         this._id = row.split(",")[0];
-        this._defaultCapacity = Integer.parseInt(row.split(", ")[1]);
+        this._defaultCapacity = Integer.parseInt(row.split(",")[1]);
         this._currentCapacity = this._defaultCapacity;
     }
 
@@ -20,7 +20,7 @@ public class Course {
     public String toString()
     {
         return _id + _enrolledStudentsIDs.stream()
-            .map(sID -> ", " + sID )
+            .map(sID -> "," + sID )
                 .reduce("", String::concat);
     }
 
