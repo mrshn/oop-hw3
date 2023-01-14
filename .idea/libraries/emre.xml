@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="emre">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/HW3-StudentPack.zip!/" />
+      <root url="jar://$PROJECT_DIR$/Input-Set1.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
