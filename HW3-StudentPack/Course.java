@@ -71,7 +71,7 @@ public class Course {
 
     public boolean isCourseFull()
     {
-        return ( _enrolledStudentsIDs.size() == _currentCapacity );
+        return ( (_currentCapacity > 0 ) && ( _enrolledStudentsIDs.size() == _currentCapacity ) );
     }
 
     public int getLastEnrolledToken()
@@ -87,8 +87,9 @@ public class Course {
             {
                 return findToken.getToken();
             }
+            System.out.println("aaaaaaaaaaaaaaa");
         }
-        return 0;
+        return -1;
     }
 
     public boolean isEnrolled(String searchedStudentID)

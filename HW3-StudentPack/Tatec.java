@@ -47,10 +47,11 @@ public class Tatec
                             course.getSubmittedTokens().stream()
                                 .filter( token -> (token.getToken() == course.getLastEnrolledToken() && !course.isEnrolled(token.getStudentId())) )
                                     .forEach(token ->
-                                    {
-                                        course.enrollStudent(token.getStudentId());
-                                        course.increaseCurrentCourseCapacity();
-                                    })
+                                                    {
+                                                        course.enrollStudent(token.getStudentId());
+                                                        course.increaseCurrentCourseCapacity();
+                                                    }
+                                    )
             );
         }
 
@@ -62,7 +63,8 @@ public class Tatec
                         course.clearEnrolledStudents();
                         Collections.shuffle(course.getSubmittedTokens(), new Random());
                         course.getSubmittedTokens().stream().filter(token -> token.getToken() > 0)
-                                .limit(course.getDefaultCourseCapacity()).forEach( token -> course.enrollStudent(token.getStudentId()) );
+                                .limit( course.getDefaultCourseCapacity() )
+                                .forEach( token -> course.enrollStudent(token.getStudentId()) );
                     }
             );
         }
