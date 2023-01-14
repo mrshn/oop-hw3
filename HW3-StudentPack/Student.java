@@ -2,9 +2,11 @@ import java.util.List;
 
 public class Student
 {
+    public static int STUDENTS_CORRECT_TOTAL_TOKEN = 100;
+    public static boolean isAllStudentsValid = true;
+
     private final List<Integer> _tokens;
     private final String _id;
-    public static boolean isAllStudentsValid = true;
 
     public Student(List<Integer> tokenList, String id )
     {
@@ -15,9 +17,8 @@ public class Student
 
     private void _checkTokensValidity()
     {
-        if( 100 != this._tokens.stream().reduce(0, Integer::sum)   )
+        if( STUDENTS_CORRECT_TOTAL_TOKEN != this._tokens.stream().reduce(0, Integer::sum)   )
         {
-            System.err.println("aaaaaaaaaaaaaaa"+this._tokens.stream().reduce(0, Integer::sum).toString() );
             isAllStudentsValid = false;
         }
     }
@@ -25,6 +26,11 @@ public class Student
     public List<Integer> getStudentTokens()
     {
         return _tokens;
+    }
+
+    public Integer getStudentTokenWithIndex(int index)
+    {
+        return _tokens.get(index);
     }
 
     public String getStudentId()

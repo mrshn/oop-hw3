@@ -1,14 +1,12 @@
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
 import java.util.stream.Collectors;
+import java.util.Collections;
 import java.util.List;
+import java.util.Comparator;
+import java.util.*;
 import java.io.*;
 
 
@@ -20,6 +18,60 @@ public class Tatec
     private static final String OUT_RAND_UNHAPPY = "unhappyOutRANDOM.txt";
     private static final String OUT_RAND_ADMISSION = "admissionOutRANDOM.txt";
 
+    private static List<Course> allCourses ;
+    private static List<List<Integer>> allTokens ;
+    private static List<Student> allStudents;
+
+    private static class Assigner {
+
+        public Assigner(){}
+
+        private static void submitTokensToCourses()
+        {
+            IntStream.range(0, allCourses.size())
+                .forEach( courseIndex ->
+                    allStudents.stream()
+                        .forEach( student ->
+                            allCourses.get(courseIndex).submitToken( student.getStudentId(), student.getStudentTokenWithIndex(courseIndex) )
+                        )
+                );
+        }
+
+        private static void enrollStudents()
+        {
+            allCourses.stream().forEach(
+                course -> course.getSubmittedTokens().stream()
+                    .filter(token -> token.getToken() > 0)
+                        .sorted(Comparator.reverseOrder())
+                            .limit(course.getCurrentCourseCapacity()).forEach(token -> course.enrollStudent(token.getStudentId()))
+            );
+
+            allCourses.stream().filter(course -> course.isCourseFull())
+                        .forEach(course ->
+                            course.getSubmittedTokens().stream()
+                                .filter( token -> (token.getToken() == course.getLastEnrolledToken() && !course.isEnrolled(token.getStudentId())) )
+                                    .forEach(token ->
+                                    {
+                                        course.enrollStudent(token.getStudentId());
+                                        course.increaseCurrentCourseCapacity();
+                                    })
+            );
+        }
+
+        private static void enrollStudentsRandomly()
+        {
+            allCourses.stream().forEach(
+                    course ->
+                    {
+                        course.clearEnrolledStudents();
+                        Collections.shuffle(course.getSubmittedTokens(), new Random());
+                        course.getSubmittedTokens().stream().filter(token -> token.getToken() > 0)
+                                .limit(course.getDefaultCourseCapacity()).forEach( token -> course.enrollStudent(token.getStudentId()) );
+                    }
+            );
+        }
+    }
+
     public static void main(String args[])
     {
         if(args.length < 4)
@@ -28,7 +80,6 @@ public class Tatec
             return;
         }
 
-        // File Paths
         String courseFilePath = args[0];
         String studentIdFilePath = args[1];
         String tokenFilePath = args[2];
@@ -41,100 +92,66 @@ public class Tatec
             return;
         }
 
-        List<Course> allCourses = StreamAnalyzer.analyzeFile(courseFilePath, Tatec::_readCourses) ;
-        List<String> allStudentIDs =  StreamAnalyzer.analyzeFile(studentIdFilePath, (fileStream) -> _collectToList(fileStream)) ;
-        List<List<Integer>> allTokens =   StreamAnalyzer.analyzeFile(tokenFilePath, Tatec::_readAllTokens) ;
+        Student.STUDENTS_CORRECT_TOTAL_TOKEN = CORRECT_TOTAL_TOKEN_PER_STUDENT;
 
-        List<Student> allStudents  =  _collectToList( IntStream.range(0, allStudentIDs.size())
+        List<String> allStudentIDs =  StreamAnalyzer.analyzeFile(studentIdFilePath, (fileStream) -> _collectToList(fileStream)) ;
+        allCourses = StreamAnalyzer.analyzeFile(courseFilePath, Tatec::_readCourses) ;
+        allTokens = StreamAnalyzer.analyzeFile(tokenFilePath, Tatec::_readAllTokens) ;
+        allStudents = _collectToList( IntStream.range(0, allStudentIDs.size())
                 .mapToObj(i -> new Student(allTokens.get(i), allStudentIDs.get(i))) );
 
         if(Student.isAllStudentsValid == false)
         {
-            System.out.println("Error: Student did not use 100 tokens");
+            System.err.println("Error: Student did not use 100 tokens");
             return;
         }
 
-        IntStream.range(0, allCourses.size()).forEach(index ->
-                allStudents.stream().forEach(student ->
-                        allCourses.get(index).addToken(student.getStudentId(), student.getStudentTokens().get(index))));
+        Assigner.submitTokensToCourses();
+        Assigner.enrollStudents();
 
-        allCourses.stream().forEach(Course::assignStudentsByTatec);
+        List<Double> uTatec = _calculateUnhappiness(h);
 
-        List<Double> unhappinessByTatec = allStudents.stream().mapToDouble(student ->
-                IntStream.range(0, allCourses.size())
-                        .mapToDouble(index ->
-                                unhappinessFunction(h, student.getStudentTokens().get(index),
-                                        student.getStudentTokens().get(index) > 0 && !allCourses.get(index).isAssigned(student.getStudentId())))
-                        .sum()).boxed().collect( Collectors.toList() );
+        try
+        {
+            _outputAdmissions(OUT_TATEC_ADMISSION);
+            _outputUnhappiness(OUT_TATEC_UNHAPPY, h , uTatec);
 
-
-        try {
-            PrintStream out = new PrintStream(
-                    new FileOutputStream("admissionOutTATEC.txt", false), true);
-            System.setOut(out);
-            allCourses.stream().forEach(System.out::println);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+        } catch (FileNotFoundException exp)
+        {
+            throw new RuntimeException(exp);
         }
 
-        try {
-            PrintStream out = new PrintStream(
-                    new FileOutputStream("unhappyOutTATEC.txt", false), true);
-            System.setOut(out);
-            System.out.println(unhappinessByTatec.stream().reduce(0.0, Double::sum));
-            unhappinessByTatec.stream().forEach(System.out::println);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        Assigner.enrollStudentsRandomly();
+        List<Double> uRandom = _calculateUnhappiness(h);
 
-        allCourses.stream().forEach(Course::assignStudentsByRandom);
+        try
+        {
+            _outputAdmissions(OUT_RAND_ADMISSION);
+            _outputUnhappiness(OUT_RAND_UNHAPPY, h , uRandom);
 
-        List<Double> unhappinessByRandom = allStudents.stream().mapToDouble(student ->
-                IntStream.range(0, allCourses.size())
-                        .mapToDouble(index ->
-                                unhappinessFunction(h, student.getStudentTokens().get(index),
-                                        student.getStudentTokens().get(index) > 0 && !allCourses.get(index).isAssigned(student.getStudentId())))
-                        .sum()).boxed().collect( Collectors.toList() );
+        } catch (FileNotFoundException exp)
+        {
+            throw new RuntimeException(exp);
+        }
+    }
 
+    private static void _outputHelper(String outputFileName)  throws FileNotFoundException
+    {
+        PrintStream out = new PrintStream( new FileOutputStream( outputFileName, false), true);
+        System.setOut(out);
+    }
 
-        try {
-            PrintStream out = new PrintStream(
-                    new FileOutputStream("admissionOutRANDOM.txt", false), true);
-            System.setOut(out);
-            allCourses.stream().forEach(System.out::println);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+    private static void _outputAdmissions(String outputFileName) throws FileNotFoundException
+    {
+        _outputHelper(outputFileName);
+        allCourses.stream().forEach(System.out::println);
+    }
 
-        try {
-            PrintStream out = new PrintStream(
-                    new FileOutputStream("unhappyOutRANDOM.txt", false), true);
-            System.setOut(out);
-            System.out.println(unhappinessByRandom.stream().reduce(0.0, Double::sum));
-            unhappinessByRandom.stream().forEach(System.out::println);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
-        /*for(Course course : allCourses) {
-            System.out.println(course.toString());
-        }
-        for(String id : allStudentIDs) {
-            System.out.println(id);
-        }
-        for(List<Integer> list : allTokens) {
-            for(Integer number : list) {
-                System.out.print(number.toString()+"--");
-            }
-            System.out.println();
-        }*/
-        for(Student st : allStudents) {
-            System.out.print(st.getStudentId()+"      ===" );
-            for(Integer num : st.getStudentTokens()){
-                System.out.print(num.toString()+"--");
-            }
-            System.out.println();
-        }
+    private static void _outputUnhappiness(String outputFileName, double h,  List<Double> unhappyList) throws FileNotFoundException
+    {
+        _outputHelper(outputFileName);
+        System.out.println(unhappyList.stream().reduce(0.0, Double::sum));
+        unhappyList.stream().forEach(System.out::println);
     }
 
     private static <T> List<T> _collectToList(Stream<T> stream)
@@ -152,9 +169,23 @@ public class Tatec
         return _collectToList( fileStream.map( (String row) -> _collectToList( Stream.of(row.split(",")).mapToInt(Integer::parseInt).boxed() )) );
     }
 
-    public static double unhappinessFunction(double h, int token, boolean unhappy)
+    private static List<Double> _calculateUnhappiness(double h)
     {
-        return (unhappy) ? (-100.0/h) * Math.log(1 - (token/100.0)): 0.0;
+        return _collectToList( allStudents.stream().mapToDouble( eachStudent -> IntStream.range(0, allCourses.size())
+                .mapToDouble( index -> _calculateUnhappinessHelper( eachStudent, h, index ) ).sum() ).boxed()
+        );
+    }
+
+    private static double _calculateUnhappinessHelper( Student student, double h, int index )
+    {
+        return _isStudentUnhappy( student, index )
+                ? ( -100.0 / h ) * Math.log( 1 - ( student.getStudentTokenWithIndex(index) /100.0) )
+                : 0.0;
+    }
+
+    private static boolean _isStudentUnhappy(Student student, int index)
+    {
+        return ( ( student.getStudentTokenWithIndex(index) > 0 ) && !allCourses.get(index).isEnrolled(student.getStudentId()) );
     }
 
 }
@@ -169,6 +200,33 @@ public class Tatec
 
 
 
+
+
+
+
+
+
+
+
+        /*for(Course course : allCourses) {
+            System.out.println(course.toString());
+        }
+        for(String id : allStudentIDs) {
+            System.out.println(id);
+        }
+        for(List<Integer> list : allTokens) {
+            for(Integer number : list) {
+                System.out.print(number.toString()+"--");
+            }
+            System.out.println();
+        }
+        for(Student st : allStudents) {
+            System.out.print(st.getStudentId()+"      ===" );
+            for(Integer num : st.getStudentTokens()){
+                System.out.print(num.toString()+"--");
+            }
+            System.out.println();
+        }*/
 
 
 
