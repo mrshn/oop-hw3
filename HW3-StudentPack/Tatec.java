@@ -1,14 +1,11 @@
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-
 import java.util.stream.Collectors;
 import java.util.Collections;
 import java.util.List;
 import java.util.Comparator;
 import java.util.*;
 import java.io.*;
-
 
 public class Tatec
 {
@@ -19,7 +16,6 @@ public class Tatec
     private static final String OUT_RAND_ADMISSION = "admissionOutRANDOM.txt";
 
     private static List<Course> allCourses ;
-    private static List<List<Integer>> allTokens ;
     private static List<Student> allStudents;
 
     private static class Assigner {
@@ -42,7 +38,7 @@ public class Tatec
             allCourses.stream().forEach(
                 course -> course.getSubmittedTokens().stream()
                     .filter(token -> token.getToken() > 0)
-                        .sorted(Comparator.reverseOrder())
+                        .sorted( Comparator.reverseOrder() )
                             .limit(course.getCurrentCourseCapacity()).forEach(token -> course.enrollStudent(token.getStudentId()))
             );
 
@@ -94,11 +90,11 @@ public class Tatec
 
         Student.STUDENTS_CORRECT_TOTAL_TOKEN = CORRECT_TOTAL_TOKEN_PER_STUDENT;
 
-        List<String> allStudentIDs =  StreamAnalyzer.analyzeFile(studentIdFilePath, (fileStream) -> _collectToList(fileStream)) ;
-        allCourses = StreamAnalyzer.analyzeFile(courseFilePath, Tatec::_readCourses) ;
-        allTokens = StreamAnalyzer.analyzeFile(tokenFilePath, Tatec::_readAllTokens) ;
+        List<String> allStudentIDs =  FileReader.readFile( studentIdFilePath, (fileStream) -> _collectToList(fileStream) ) ;
+        List<List<Integer>> allTokens = FileReader.readFile( tokenFilePath, Tatec::_readAllTokens ) ;
+        allCourses = FileReader.readFile( courseFilePath, Tatec::_readCourses ) ;
         allStudents = _collectToList( IntStream.range(0, allStudentIDs.size())
-                .mapToObj(i -> new Student(allTokens.get(i), allStudentIDs.get(i))) );
+                .mapToObj(index -> new Student(allTokens.get(index), allStudentIDs.get(index))) );
 
         if(Student.isAllStudentsValid == false)
         {
@@ -178,9 +174,21 @@ public class Tatec
 
     private static double _calculateUnhappinessHelper( Student student, double h, int index )
     {
-        return _isStudentUnhappy( student, index )
-                ? ( -100.0 / h ) * Math.log( 1 - ( student.getStudentTokenWithIndex(index) /100.0) )
+        double unhappy = _isStudentUnhappy( student, index )
+                ? ( -100.0 / h ) * Math.log( 1 - ( student.getStudentTokenWithIndex(index) / 100.0) )
                 : 0.0;
+
+        Course findEnrolledCourse = allCourses.stream()
+                .filter(course -> course.isEnrolled(student.getStudentId()) )
+                .findAny()
+                .orElse(null);
+
+        if(findEnrolledCourse == null)
+        {
+            unhappy = unhappy * unhappy;
+        }
+
+        return Math.min(unhappy, 100.0);
     }
 
     private static boolean _isStudentUnhappy(Student student, int index)
@@ -189,54 +197,3 @@ public class Tatec
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        /*for(Course course : allCourses) {
-            System.out.println(course.toString());
-        }
-        for(String id : allStudentIDs) {
-            System.out.println(id);
-        }
-        for(List<Integer> list : allTokens) {
-            for(Integer number : list) {
-                System.out.print(number.toString()+"--");
-            }
-            System.out.println();
-        }
-        for(Student st : allStudents) {
-            System.out.print(st.getStudentId()+"      ===" );
-            for(Integer num : st.getStudentTokens()){
-                System.out.print(num.toString()+"--");
-            }
-            System.out.println();
-        }*/
-
-
-
-
-
-
-
-
-
-
-
-
-

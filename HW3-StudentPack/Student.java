@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 public class Student
@@ -21,11 +22,6 @@ public class Student
         {
             isAllStudentsValid = false;
         }
-    }
-
-    public List<Integer> getStudentTokens()
-    {
-        return _tokens;
     }
 
     public Integer getStudentTokenWithIndex(int index)

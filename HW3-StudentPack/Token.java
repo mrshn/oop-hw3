@@ -1,6 +1,5 @@
-
-public class Token implements Comparable<Token>{
-
+public class Token implements Comparable<Token>
+{
     private final String _courseID;
     private final String _studentID;
     private final int _token;
@@ -10,6 +9,12 @@ public class Token implements Comparable<Token>{
         this._courseID = cID;
         this._studentID = sID;
         this._token = tokens;
+    }
+
+    @Override
+    public int compareTo(Token rhs)
+    {
+        return this.getToken() - rhs.getToken();
     }
 
     public String getCourseId()
@@ -27,9 +32,4 @@ public class Token implements Comparable<Token>{
         return _token;
     }
 
-    @Override
-    public int compareTo(Token o)
-    {
-        return this.getToken() - o.getToken();
-    }
 }

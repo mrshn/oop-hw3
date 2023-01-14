@@ -76,7 +76,7 @@ public class Course {
 
     public int getLastEnrolledToken()
     {
-        if( _enrolledStudentsIDs.size()>0 )
+        if( _enrolledStudentsIDs.size() > 0 )
         {
             String lastEnrolledId = _enrolledStudentsIDs.get( _enrolledStudentsIDs.size() - 1 );
             Token findToken = _submittedTokens.stream()
